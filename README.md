@@ -22,6 +22,12 @@ A prometheus exporter for Facepunch Rust servers
 | facepunch_rust_server_network_in | Ingress networking traffic |
 | facepunch_rust_server_network_out | Egress networking traffic |
 | facepunch_rust_server_restarting | 1 if the server is restarting, 0 for running |
+| facepunch_rust_electrical_high_priority | Queue used by monument electrical entities (i.e., puzzles). (Requires Custom Plugin) |
+| facepunch_rust_electrical_low_priority | Queue used by other electrical entities (i.e., player deployables). (Requires Custom Plugin) |
+| facepunch_rust_fluidic | Queue used by fluid entities (e.g, water barrels, sprinklers). (Requires Custom Plugin) |
+| facepunch_rust_kinetic | Queue used by kinetic entities (e.g., wheel switch, blast door). (Requires Custom Plugin) |
+| facepunch_rust_generic | Queue not used by Facepunch. (Requires Custom Plugin) |
+| facepunch_rust_industrial | Queue used by industrial entities (e.g, industrial conveyor, industrial crafter). (Requires Custom Plugin) |
 
 ## Getting Started
 
