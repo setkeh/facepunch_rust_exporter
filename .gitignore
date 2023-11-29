@@ -20,3 +20,4 @@ grafana/
 wal_tmp
 examples/grafana-agent/agent.mine.yml
 .vscode
+facepunch_rust_exporter

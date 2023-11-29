@@ -33,6 +33,15 @@ type ServerInfo struct {
 	SaveCreatedTime string  `json:"SaveCreatedTime"`
 }
 
+type IOReport struct {
+	ElectricHighPriority int `json:"ElectricHighPriority"`
+	ElectricLowPriority  int `json:"ElectricLowPriority"`
+	Fluidic              int `json:"Fluidic"`
+	Kinetic              int `json:"Kinetic"`
+	Generic              int `json:"Generic"`
+	Industrial           int `json:"Industrial"`
+}
+
 type ServerBuildInfo struct {
 	Date int `json:"date"`
 	Scm  struct {
@@ -124,19 +133,25 @@ func NewFacepunchRustExporter(rustAddr string, opts Options) (*Exporter, error) 
 		txt  string
 		lbls []string
 	}{
-		"players":             {txt: "The number of currently connected players.", lbls: labels},
-		"players_queued":      {txt: "The number of players queued to connect.", lbls: labels},
-		"players_joining":     {txt: "The number of players connecting.", lbls: labels},
-		"server_max_players":  {txt: "Max number of players allowed to join.", lbls: labels},
-		"server_entity_count": {txt: "Number of entities loaded in game.", lbls: labels},
-		"server_uptime":       {txt: "How long the server has been up for.", lbls: labels},
-		"server_framerate":    {txt: "Server framerate.", lbls: labels},
-		"server_memory":       {txt: "Server memory consumption.", lbls: labels},
-		"server_collections":  {txt: "Number of collections loaded in game.", lbls: labels},
-		"server_network_in":   {txt: "Ingress networking traffic.", lbls: labels},
-		"server_network_out":  {txt: "Egress networking traffic.", lbls: labels},
-		"server_restarting":   {txt: "1 if the server is restarting, 0 for running.", lbls: labels},
-		"up":                  {txt: "Information about the FacepunchRust client", lbls: labels},
+		"players":                {txt: "The number of currently connected players.", lbls: labels},
+		"players_queued":         {txt: "The number of players queued to connect.", lbls: labels},
+		"players_joining":        {txt: "The number of players connecting.", lbls: labels},
+		"server_max_players":     {txt: "Max number of players allowed to join.", lbls: labels},
+		"server_entity_count":    {txt: "Number of entities loaded in game.", lbls: labels},
+		"server_uptime":          {txt: "How long the server has been up for.", lbls: labels},
+		"server_framerate":       {txt: "Server framerate.", lbls: labels},
+		"server_memory":          {txt: "Server memory consumption.", lbls: labels},
+		"server_collections":     {txt: "Number of collections loaded in game.", lbls: labels},
+		"server_network_in":      {txt: "Ingress networking traffic.", lbls: labels},
+		"server_network_out":     {txt: "Egress networking traffic.", lbls: labels},
+		"server_restarting":      {txt: "1 if the server is restarting, 0 for running.", lbls: labels},
+		"up":                     {txt: "Information about the FacepunchRust client", lbls: labels},
+		"electric_high_priority": {txt: "Used by monument electrical entities (i.e., puzzles).", lbls: labels},
+		"electric_low_priority":  {txt: "Used by other electrical entities (i.e., player deployables).", lbls: labels},
+		"fluidic":                {txt: "Used by fluid entities (e.g, water barrels, sprinklers).", lbls: labels},
+		"kinetic":                {txt: "Used by kinetic entities (e.g., wheel switch, blast door).", lbls: labels},
+		"generic":                {txt: "Not Used", lbls: labels},
+		"industrial":             {txt: "Used by industrial entities (e.g, industrial conveyor, industrial crafter).", lbls: labels},
 	} {
 		e.metricDescriptions[k] = newMetricDescr(opts.Namespace, k, desc.txt, desc.lbls)
 	}
@@ -212,7 +227,10 @@ func (e *Exporter) scrapeRustServer(ch chan<- prometheus.Metric) (err error) {
 	}
 	defer e.conn.Close()
 
+	log.Debugf("ServerInfo")
 	e.extractServerInfo(ch)
+	log.Debugf("IOREPORT")
+	e.extractIOReport(ch)
 
 	return nil
 }
@@ -245,6 +263,24 @@ func (e *Exporter) extractServerInfo(ch chan<- prometheus.Metric) {
 			return 0
 		}
 	}()), labels...)
+}
+
+func (e *Exporter) extractIOReport(ch chan<- prometheus.Metric) {
+	log.Debugf("extractIOReport()")
+	serverInfoOutput, err := e.doRustCmd("ioreport")
+	if err != nil {
+		log.Errorf("extractIOReport() err: %s", err)
+		return
+	}
+	si := IOReport{}
+	json.Unmarshal([]byte(serverInfoOutput), &si)
+	labels := e.getBuildInfoLabels()
+	e.registerConstMetricGauge(ch, "electric_high_priority", float64(si.ElectricHighPriority), labels...)
+	e.registerConstMetricGauge(ch, "electric_low_priority", float64(si.ElectricLowPriority), labels...)
+	e.registerConstMetricGauge(ch, "fluidic", float64(si.Fluidic), labels...)
+	e.registerConstMetricGauge(ch, "kinetic", float64(si.Kinetic), labels...)
+	e.registerConstMetricGauge(ch, "generic", float64(si.Generic), labels...)
+	e.registerConstMetricGauge(ch, "industrial", float64(si.Industrial), labels...)
 }
 
 func (e *Exporter) getBuildInfoLabels() []string {
